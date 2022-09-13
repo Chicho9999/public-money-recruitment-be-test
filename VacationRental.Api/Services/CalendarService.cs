@@ -7,10 +7,12 @@ namespace VacationRental.Api.Services.Interfaces
     public class CalendarService : ICalendarService
     {
         private readonly IDictionary<int, BookingViewModel> _bookings;
-        
-        public CalendarService(IDictionary<int, BookingViewModel> bookings)
+        private readonly IDictionary<int, RentalViewModel> _rentals;
+
+        public CalendarService(IDictionary<int, BookingViewModel> bookings, IDictionary<int, RentalViewModel> rentals)
         {
             _bookings = bookings;
+            _rentals = rentals;
         }
 
         public CalendarViewModel RetrieveOcupiedDates(int rentalId, DateTime start, int nights)
@@ -26,7 +28,8 @@ namespace VacationRental.Api.Services.Interfaces
                 var calendarDate = new CalendarDateViewModel
                 {
                     Date = start.Date.AddDays(i),
-                    Bookings = new List<CalendarBookingViewModel>()
+                    Bookings = new List<CalendarBookingViewModel>(),
+                    PreparationTimes = new PreparationTimes()
                 };
 
                 foreach (var booking in _bookings.Values)
@@ -34,7 +37,8 @@ namespace VacationRental.Api.Services.Interfaces
                     if (booking.RentalId == rentalId
                         && booking.Start <= calendarDate.Date && booking.Start.AddDays(booking.Nights) > calendarDate.Date)
                     {
-                        calendarDate.Bookings.Add(new CalendarBookingViewModel { Id = booking.Id });
+                        calendarDate.Bookings.Add(new CalendarBookingViewModel { Id = booking.Id, Units = _rentals[rentalId].Units });
+                        calendarDate.PreparationTimes.Units = _rentals[rentalId].PreparationTimeInDays;
                     }
                 }
 
