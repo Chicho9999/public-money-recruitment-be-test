@@ -6,7 +6,8 @@ namespace VacationRental.Api.Services
 {
     public interface IRentalService
     {
-        Task AddRentalAsync(RentalBindingModel model, ResourceIdViewModel newResource);
-        Task<RentalViewModel> UpdateRental(int rentalId, RentalBindingModel rentalBinding);
+        Task<ResourceIdViewModel> AddRentalAsync(RentalBindingModel newRental);
+        Task<RentalViewModel> UpdateRentalAsync(int rentalId, RentalBindingModel rentalBinding);
+        Task<RentalViewModel> GetRentalAsync(int rentalId);
     }
 }

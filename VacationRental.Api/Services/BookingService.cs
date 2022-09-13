@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using VacationRental.Api.Models;
 
@@ -17,36 +17,55 @@ namespace VacationRental.Api.Services
             _bookings = bookings;
         }
 
-        public async Task AddBookingAsync(BookingBindingModel bookingBindingModel, ResourceIdViewModel resource)
+        public async Task<bool> CheckAvailability(BookingBindingModel newBooking)
         {
-            await Task.Run( ()=> _bookings.Add(resource.Id, new BookingViewModel
+            for (var i = 0; i < newBooking.Nights; i++)
             {
-                Id = resource.Id,
-                Nights = bookingBindingModel.Nights,
-                RentalId = bookingBindingModel.RentalId,
-                Start = bookingBindingModel.Start.Date
-            }));
-        }
-
-        public bool CheckAvailability(BookingBindingModel bookingBinding)
-        {
-            for (var i = 0; i < bookingBinding.Nights; i++)
-            {   
                 var count = 0;
-                foreach (var booking in _bookings.Values)
+                foreach (var currentBooking in _bookings.Values)
                 {
-                    if (booking.RentalId == bookingBinding.RentalId
-                        && (booking.Start <= bookingBinding.Start.Date && booking.Start.AddDays(booking.Nights) > bookingBinding.Start.Date)
-                        || (booking.Start < bookingBinding.Start.AddDays(bookingBinding.Nights) && booking.Start.AddDays(booking.Nights) >= bookingBinding.Start.AddDays(bookingBinding.Nights))
-                        || (booking.Start > bookingBinding.Start && booking.Start.AddDays(booking.Nights) < bookingBinding.Start.AddDays(bookingBinding.Nights)))
+                    var newBookingEnd = newBooking.Start.AddDays(newBooking.Nights);
+
+                    if (currentBooking.RentalId == newBooking.RentalId
+                        && currentBooking.Start <= newBooking.Start.Date && currentBooking.End > newBooking.Start.Date
+                        || (currentBooking.Start < newBookingEnd && currentBooking.End >= newBookingEnd)
+                        || (currentBooking.Start > newBooking.Start && currentBooking.End < newBookingEnd)
+                        )
                     {
                         count++;
                     }
                 }
-                if (count >= _rentals[bookingBinding.RentalId].Units)
+
+                var rental = await Task.Run(() => _rentals[newBooking.RentalId]);
+
+                if (count >= rental.Units)
                     return false;
             }
             return true;
+        }
+
+        public async Task<ResourceIdViewModel> AddBookingAsync(BookingBindingModel newBooking)
+        {
+            var newResource = new ResourceIdViewModel { Id = _bookings.Keys.Count + 1 };
+            var rental = _rentals[newBooking.RentalId];
+
+            await Task.Run( ()=> _bookings.Add(newResource.Id, new BookingViewModel
+            {
+                Id = newResource.Id,
+                Nights = newBooking.Nights,
+                RentalId = newBooking.RentalId,
+                Start = newBooking.Start.Date,
+                End = newBooking.Start.Date.AddDays(newBooking.Nights + rental.PreparationTimeInDays)
+            }));
+
+            return newResource;
+        }
+
+        public async Task<BookingViewModel> GetBookingAsync(int bookingId)
+        {
+            var booking = await Task.Run(() => _bookings[bookingId]);
+
+            return booking;
         }
     }
 }

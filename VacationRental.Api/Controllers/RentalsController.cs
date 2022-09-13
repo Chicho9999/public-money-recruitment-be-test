@@ -24,8 +24,7 @@ namespace VacationRental.Api.Controllers
         [Route("{rentalId:int}")]
         public RentalViewModel Get(int rentalId)
         {
-            if (!_rentals.ContainsKey(rentalId))
-                throw new ApplicationException("Rental not found");
+            ValidateRental(rentalId);
 
             return _rentals[rentalId];
         }
@@ -33,22 +32,29 @@ namespace VacationRental.Api.Controllers
         [HttpPost]
         public async Task<ResourceIdViewModel> PostAsync(RentalBindingModel rentalBinding)
         {
-            var newResource = new ResourceIdViewModel { Id = _rentals.Keys.Count + 1 };
-            await _rentalService.AddRentalAsync(rentalBinding, newResource);
+            var newResource = await _rentalService.AddRentalAsync(rentalBinding);
 
             return newResource;
         }
 
         [HttpPut]
         [Route("{rentalId:int}")]
-        public async Task<RentalViewModel> Update(int rentalId, [FromBody] RentalBindingModel rentalBinding)
+        public async Task<RentalViewModel> Update(int rentalId, [FromBody] RentalBindingModel rentalModel)
+        {
+            ValidateRental(rentalId);
+
+            if (rentalModel.PreparationTimeInDays <= 0)
+                throw new ApplicationException("Preparation time in days must be positive");
+
+            var updatedRental = await _rentalService.UpdateRentalAsync(rentalId, rentalModel);
+
+            return updatedRental;
+        }
+
+        private void ValidateRental(int rentalId)
         {
             if (!_rentals.ContainsKey(rentalId))
                 throw new ApplicationException("Rental not found");
-
-            var updatedRental = await _rentalService.UpdateRental(rentalId, rentalBinding);
-
-            return updatedRental;
         }
     }
 }

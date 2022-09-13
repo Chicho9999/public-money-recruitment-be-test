@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using VacationRental.Api.Models;
@@ -11,28 +10,26 @@ namespace VacationRental.Api.Controllers
     [ApiController]
     public class BookingsController : ControllerBase
     {
-        private readonly IDictionary<int, RentalViewModel> _rentals;
-        private readonly IDictionary<int, BookingViewModel> _bookings;
+        private readonly IRentalService _rentalService;
         private readonly IBookingService _bookingService;
 
         public BookingsController(
-            IDictionary<int, RentalViewModel> rentals,
-            IDictionary<int, BookingViewModel> bookings,
+            IRentalService rentalService,
             IBookingService bookingService)
         {
-            _rentals = rentals;
-            _bookings = bookings;
+            _rentalService = rentalService;
             _bookingService = bookingService;
         }
 
         [HttpGet]
         [Route("{bookingId:int}")]
-        public BookingViewModel Get(int bookingId)
+        public async Task<BookingViewModel> Get(int bookingId)
         {
-            if (!_bookings.ContainsKey(bookingId))
+            var booking = await _bookingService.GetBookingAsync(bookingId);
+            if (booking == null)
                 throw new ApplicationException("Booking not found");
 
-            return _bookings[bookingId];
+            return booking;
         }
 
         [HttpPost]
@@ -40,22 +37,20 @@ namespace VacationRental.Api.Controllers
         {
             if (bookingBindingModel.Nights <= 0)
                 throw new ApplicationException("Nigts must be positive");
-            if (!_rentals.ContainsKey(bookingBindingModel.RentalId))
+
+            var rental = await _rentalService.GetRentalAsync(bookingBindingModel.RentalId);
+            if (rental == null)
                 throw new ApplicationException("Rental not found");
 
-
-            var response = _bookingService.CheckAvailability(bookingBindingModel);
-
-            if (!response)
+            var isAvailable = await _bookingService.CheckAvailability(bookingBindingModel);
+            if (!isAvailable)
             {
                 throw new ApplicationException("Not available");
             }
 
-            var resource = new ResourceIdViewModel { Id = _bookings.Keys.Count + 1 };
+            var newBooking = await _bookingService.AddBookingAsync(bookingBindingModel);
 
-            await _bookingService.AddBookingAsync(bookingBindingModel, resource);
-
-            return resource;
+            return newBooking;
         }
     }
 }

@@ -6,8 +6,8 @@ namespace VacationRental.Api.Services
 {
     public interface IBookingService
     {
-        bool CheckAvailability(BookingBindingModel bookingBinding);
-
-        Task AddBookingAsync(BookingBindingModel bookingBindingModel, ResourceIdViewModel resource);
+        Task<bool> CheckAvailability(BookingBindingModel bookingBinding);
+        Task<ResourceIdViewModel> AddBookingAsync(BookingBindingModel bookingBindingModel);
+        Task<BookingViewModel> GetBookingAsync(int bookingId);
     }
 }
